@@ -215,6 +215,7 @@ SatHelper::SatHelper(std::string scenarioPath)
     m_utPosFileName = m_scenarioPath + "/positions/ut_positions.txt";
 
     m_waveformConfDirectoryName = m_scenarioPath + "/waveforms";
+    m_satTraceFiles.clear();
 
     ReadStandard(m_scenarioPath + "/standard/standard.txt");
 
@@ -230,6 +231,34 @@ SatHelper::SatHelper(std::string scenarioPath)
                                                              "/positions/sat_positions.txt"))
     {
         NS_FATAL_ERROR("position subfolder of scenario must contain tles.txt or sat_positions.txt");
+    }
+
+    std::string satTraceMapFile = m_scenarioPath + "/positions/sat_traces.txt";
+    if (Singleton<SatEnvVariables>::Get()->IsValidFile(satTraceMapFile))
+    {
+        std::ifstream satTraceStream(satTraceMapFile.c_str());
+        std::string line;
+        while (std::getline(satTraceStream, line))
+        {
+            if (line.empty() || line[0] == '#')
+            {
+                continue;
+            }
+
+            std::istringstream iss(line);
+            uint32_t satId = 0;
+            std::string tracePath;
+            if (!(iss >> satId >> tracePath))
+            {
+                continue;
+            }
+
+            if (satId >= m_satTraceFiles.size())
+            {
+                m_satTraceFiles.resize(satId + 1);
+            }
+            m_satTraceFiles[satId] = tracePath;
+        }
     }
 
     // uncomment next line, if attributes are needed already in construction phase
@@ -275,7 +304,14 @@ SatHelper::SatHelper(std::string scenarioPath)
             // create Satellite node, set mobility to it
             Ptr<Node> satNode = CreateObject<Node>();
 
-            SetSatMobility(satNode, tles[i]);
+            if (i < m_satTraceFiles.size() && !m_satTraceFiles[i].empty())
+            {
+                SetSatMobilityFromTrace(satNode, i, m_satTraceFiles[i]);
+            }
+            else
+            {
+                SetSatMobility(satNode, tles[i]);
+            }
 
             Ptr<SatMobilityModel> mobility = satNode->GetObject<SatMobilityModel>();
             m_antennaGainPatterns->ConfigureBeamsMobility(i, mobility);
@@ -1341,6 +1377,17 @@ SatHelper::SetSatMobility(Ptr<Node> node, std::string tle)
     }
 
     model->SetTleInfo(tle);
+}
+
+void
+SatHelper::SetSatMobilityFromTrace(Ptr<Node> node, uint32_t satId, const std::string& filename)
+{
+    NS_LOG_FUNCTION(this << node << satId << filename);
+
+    Ptr<SatTracedMobilityModel> model = CreateObject<SatTracedMobilityModel>(satId,
+                                                                              filename,
+                                                                              m_antennaGainPatterns);
+    node->AggregateObject(model);
 }
 
 void

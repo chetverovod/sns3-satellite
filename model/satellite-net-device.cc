@@ -412,15 +412,33 @@ SatNetDevice::Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNum
     NS_LOG_FUNCTION(this << packet << dest << protocolNumber);
 
     if (m_isStatisticsTagsEnabled)
-    {
+   {
         // Add a SatAddressTag tag with this device's address as the source address.
         packet->AddByteTag(SatAddressTag(m_nodeInfo->GetMacAddress()));
-
+        
+        /*
         // Add a SatDevTimeTag tag for packet delay computation at the receiver end.
         packet->AddPacketTag(SatDevTimeTag(Simulator::Now()));
 
         // Add a SatDevLinkTimeTag tag for packet link delay computation at the receiver end.
         packet->AddPacketTag(SatDevLinkTimeTag(Simulator::Now()));
+         // Add a SatDevTimeTag tag for packet delay computation at the receiver end.
+         */
+        // ИСПРАВЛЕНИЕ: Проверяем наличие тега перед добавлением
+        SatDevTimeTag timeTag;
+        if (!packet->PeekPacketTag(timeTag))
+        {
+            packet->AddPacketTag(SatDevTimeTag(Simulator::Now()));
+        }
+
+        // Add a SatDevLinkTimeTag tag for packet link delay computation at the receiver end.
+        // ИСПРАВЛЕНИЕ: Проверяем наличие тега перед добавлением
+        SatDevLinkTimeTag linkTimeTag;
+        if (!packet->PeekPacketTag(linkTimeTag))
+        {
+            packet->AddPacketTag(SatDevLinkTimeTag(Simulator::Now()));
+        }
+
     }
 
     // Add packet trace entry:
@@ -457,11 +475,28 @@ SatNetDevice::SendFrom(Ptr<Packet> packet,
         // Add a SatAddressTag tag with this device's address as the source address.
         packet->AddByteTag(SatAddressTag(m_nodeInfo->GetMacAddress()));
 
+        /*
         // Add a SatDevTimeTag tag for packet delay computation at the receiver end.
         packet->AddPacketTag(SatDevTimeTag(Simulator::Now()));
 
         // Add a SatDevLinkTimeTag tag for packet link delay computation at the receiver end.
         packet->AddPacketTag(SatDevLinkTimeTag(Simulator::Now()));
+        */
+       // Add a SatDevTimeTag tag for packet delay computation at the receiver end.
+        // ИСПРАВЛЕНИЕ: Проверяем наличие тега перед добавлением
+        SatDevTimeTag timeTag;
+        if (!packet->PeekPacketTag(timeTag))
+        {
+            packet->AddPacketTag(SatDevTimeTag(Simulator::Now()));
+        }
+
+        // Add a SatDevLinkTimeTag tag for packet link delay computation at the receiver end.
+        // ИСПРАВЛЕНИЕ: Проверяем наличие тега перед добавлением
+        SatDevLinkTimeTag linkTimeTag;
+        if (!packet->PeekPacketTag(linkTimeTag))
+        {
+            packet->AddPacketTag(SatDevLinkTimeTag(Simulator::Now()));
+        }
     }
 
     // Add packet trace entry:

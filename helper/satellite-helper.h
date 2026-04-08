@@ -298,6 +298,7 @@ class SatHelper : public Object
     std::string m_satPosFileName;
     std::string m_utPosFileName;
     std::string m_waveformConfDirectoryName;
+    std::vector<std::string> m_satTraceFiles;
 
     /**
      * Use a constellation of satellites
@@ -546,6 +547,15 @@ class SatHelper : public Object
      * \param tle the TLE linked to this satellite
      */
     void SetSatMobility(Ptr<Node> node, std::string tle);
+
+    /**
+     * Sets traced mobility from file to created Sat node.
+     *
+     * \param node node pointer of Satellite to set mobility
+     * \param satId satellite index in constellation
+     * \param filename trajectory trace file containing time/lat/lon/alt
+     */
+    void SetSatMobilityFromTrace(Ptr<Node> node, uint32_t satId, const std::string& filename);
 
     /**
      * Sets mobility to created UT nodes.
