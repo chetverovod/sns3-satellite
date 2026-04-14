@@ -56,7 +56,7 @@ SatTracedMobilityModel::GetTypeId(void)
                                           "GRS80"))
             .AddAttribute("UpdateInterval",
                           "Interval at which the position should update",
-                          TimeValue(MilliSeconds(1)),
+                          TimeValue(Seconds(1)),
                           MakeTimeAccessor(&SatTracedMobilityModel::m_updateInterval),
                           MakeTimeChecker(FemtoSeconds(1)));
 
@@ -87,7 +87,7 @@ SatTracedMobilityModel::SatTracedMobilityModel(uint32_t satId,
                                                Ptr<SatAntennaGainPatternContainer> agp)
     : m_satId(satId),
       m_traceFilename(filename),
-      m_updateInterval(MilliSeconds(1)),
+      m_updateInterval(Seconds(1)),
       m_refEllipsoid(GeoCoordinate::SPHERE),
       m_geoPosition(0.0, 0.0, 0.0),
       m_velocity(0.0, 0.0, 0.0),
@@ -143,6 +143,13 @@ SatTracedMobilityModel::UpdateGeoPositionFromFile(void)
     GeoCoordinate newPosition =
         Singleton<SatPositionInputTraceContainer>::Get()->GetPosition(m_traceFilename,
                                                                       m_refEllipsoid);
+    if (m_satId == 2)
+    {
+        NS_LOG_UNCOND("HAP trace update satId=2 t=" << Simulator::Now().GetSeconds()
+                                                    << "s lat=" << newPosition.GetLatitude()
+                                                    << " lon=" << newPosition.GetLongitude()
+                                                    << " alt=" << newPosition.GetAltitude());
+    }
     DoSetGeoPosition(newPosition);
 
     Simulator::Schedule(m_updateInterval, &SatTracedMobilityModel::UpdateGeoPositionFromFile, this);

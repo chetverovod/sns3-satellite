@@ -112,10 +112,11 @@ class SatInputFileStreamTimeDoubleContainer : public Object
     void ClearContainer();
 
     /**
-     * \brief Function for reading a row from file
-     * \return the row
+     * \brief Read the next data row from file (skips blank lines and full-line # comments).
+     * \param row output row of m_valuesInRow numbers
+     * \return true if a row was read, false at end of file
      */
-    std::vector<double> ReadRow();
+    bool ReadNextDataRow(std::vector<double>& row);
 
     /**
      * \brief Function for locating the next closest value index. This locator loops the samples if

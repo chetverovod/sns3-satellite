@@ -24,6 +24,9 @@
 #include "ns3/log.h"
 #include "ns3/simulator.h"
 
+#include <sstream>
+#include <string>
+
 NS_LOG_COMPONENT_DEFINE("SatInputFileStreamTimeDoubleContainer");
 
 namespace ns3
@@ -109,12 +112,10 @@ SatInputFileStreamTimeDoubleContainer::UpdateContainer(std::string filename,
 
     if (m_inputFileStream->is_open())
     {
-        std::vector<double> tempVector = ReadRow();
-
-        while (!m_inputFileStream->eof())
+        std::vector<double> tempVector;
+        while (ReadNextDataRow(tempVector))
         {
             m_container.push_back(tempVector);
-            tempVector = ReadRow();
         }
         m_inputFileStream->close();
     }
@@ -128,20 +129,45 @@ SatInputFileStreamTimeDoubleContainer::UpdateContainer(std::string filename,
     ResetStream();
 }
 
-std::vector<double>
-SatInputFileStreamTimeDoubleContainer::ReadRow()
+bool
+SatInputFileStreamTimeDoubleContainer::ReadNextDataRow(std::vector<double>& tempVector)
 {
     NS_LOG_FUNCTION(this);
 
-    double tempValue;
-    std::vector<double> tempVector;
-
-    for (uint32_t i = 0; i < m_valuesInRow; i++)
+    std::string line;
+    while (std::getline(*m_inputFileStream, line))
     {
-        *m_inputFileStream >> tempValue;
-        tempVector.push_back(tempValue);
+        const auto pos = line.find_first_not_of(" \t\r\n");
+        if (pos == std::string::npos)
+        {
+            continue;
+        }
+        if (line[pos] == '#')
+        {
+            continue;
+        }
+
+        std::istringstream iss(line);
+        tempVector.clear();
+        tempVector.reserve(m_valuesInRow);
+        double tempValue;
+        for (uint32_t i = 0; i < m_valuesInRow; i++)
+        {
+            if (!(iss >> tempValue))
+            {
+                NS_ABORT_MSG("SatInputFileStreamTimeDoubleContainer: expected " << m_valuesInRow
+                                                                              << " numbers per row "
+                                                                                 "in file \""
+                                                                              << m_fileName
+                                                                              << "\", got invalid "
+                                                                                 "line: \""
+                                                                              << line << "\"");
+            }
+            tempVector.push_back(tempValue);
+        }
+        return true;
     }
-    return tempVector;
+    return false;
 }
 
 void
