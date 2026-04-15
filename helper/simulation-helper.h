@@ -536,6 +536,16 @@ class SimulationHelper : public Object
     void ProgressCb();
 
     /**
+     * \brief Initialize output file path for periodic satellite coordinates log.
+     */
+    void InitializeSatCoordinatesLog();
+
+    /**
+     * \brief Append current coordinates of all satellites to the coordinates log.
+     */
+    void LogSatCoordinates();
+
+    /**
      * \brief Check if a beam is enabled.
      */
     bool IsBeamEnabled(uint32_t beamId) const;
@@ -594,6 +604,8 @@ class SimulationHelper : public Object
     bool m_progressLoggingEnabled;
     Time m_progressUpdateInterval;
     EventId m_progressReportEvent;
+    std::string m_satCoordinatesLogPath;
+    bool m_satCoordinatesLogHeaderWritten;
 };
 
 class SimulationHelperConf : public Object

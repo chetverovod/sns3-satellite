@@ -44,6 +44,7 @@
 #include <ns3/three-gpp-http-satellite-helper.h>
 #include <ns3/uinteger.h>
 
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <set>
@@ -173,7 +174,9 @@ SimulationHelper::SimulationHelper()
       m_inputFileUtListPositions(""),
       m_inputFileUtPositionsCheckBeams(true),
       m_progressLoggingEnabled(false),
-      m_progressUpdateInterval(Seconds(0.5))
+      m_progressUpdateInterval(Seconds(0.5)),
+      m_satCoordinatesLogPath(""),
+      m_satCoordinatesLogHeaderWritten(false)
 {
     NS_FATAL_ERROR(
         "SimulationHelper: Default constructor not in use. Please create with simulation name. ");
@@ -197,7 +200,9 @@ SimulationHelper::SimulationHelper(std::string simulationName)
       m_inputFileUtListPositions(""),
       m_inputFileUtPositionsCheckBeams(true),
       m_progressLoggingEnabled(false),
-      m_progressUpdateInterval(Seconds(0.5))
+      m_progressUpdateInterval(Seconds(0.5)),
+      m_satCoordinatesLogPath(""),
+      m_satCoordinatesLogHeaderWritten(false)
 {
     NS_LOG_FUNCTION(this);
 
@@ -720,8 +725,68 @@ SimulationHelper::ProgressCb()
 {
     std::cout << "Progress: " << Simulator::Now().GetSeconds() << "/" << GetSimTime().GetSeconds()
               << std::endl;
+    LogSatCoordinates();
     m_progressReportEvent =
         Simulator::Schedule(m_progressUpdateInterval, &SimulationHelper::ProgressCb, this);
+}
+
+void
+SimulationHelper::InitializeSatCoordinatesLog()
+{
+    if (!m_satCoordinatesLogPath.empty())
+    {
+        return;
+    }
+
+    const std::string outputPath = Singleton<SatEnvVariables>::Get()->GetOutputPath();
+    if (outputPath.empty())
+    {
+        return;
+    }
+
+    m_satCoordinatesLogPath = outputPath + "/SatCoordinates.log";
+}
+
+void
+SimulationHelper::LogSatCoordinates()
+{
+    InitializeSatCoordinatesLog();
+    if (m_satCoordinatesLogPath.empty())
+    {
+        return;
+    }
+
+    std::ofstream out(m_satCoordinatesLogPath, std::ios::out | std::ios::app);
+    if (!out.is_open())
+    {
+        NS_LOG_WARN("Cannot open satellite coordinates log file: " << m_satCoordinatesLogPath);
+        return;
+    }
+
+    if (!m_satCoordinatesLogHeaderWritten)
+    {
+        out << "% output_type: 'OUTPUT_TYPE_SCATTER'" << std::endl;
+        out << "% log_source: 'SimulationHelper::ProgressCb'" << std::endl;
+        out << "% time_sec sat_id latitude_deg longitude_deg altitude_m" << std::endl;
+        m_satCoordinatesLogHeaderWritten = true;
+    }
+
+    NodeContainer orbiters = Singleton<SatTopology>::Get()->GetOrbiterNodes();
+    for (uint32_t satId = 0; satId < orbiters.GetN(); ++satId)
+    {
+        Ptr<SatMobilityModel> mobility = orbiters.Get(satId)->GetObject<SatMobilityModel>();
+        if (mobility == nullptr)
+        {
+            continue;
+        }
+
+        GeoCoordinate pos = mobility->GetGeoPosition();
+        out << Simulator::Now().GetSeconds() << " "
+            << satId << " "
+            << pos.GetLatitude() << " "
+            << pos.GetLongitude() << " "
+            << pos.GetAltitude() << std::endl;
+    }
 }
 
 void
@@ -1620,6 +1685,7 @@ SimulationHelper::EnableProgressLogs()
         }
         m_progressReportEvent =
             Simulator::Schedule(m_progressUpdateInterval, &SimulationHelper::ProgressCb, this);
+        InitializeSatCoordinatesLog();
         m_progressLoggingEnabled = true;
     }
 }
