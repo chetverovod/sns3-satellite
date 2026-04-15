@@ -142,7 +142,7 @@ SatInputFileStreamTimeDoubleContainer::ReadNextDataRow(std::vector<double>& temp
         {
             continue;
         }
-        if (line[pos] == '#')
+        if (line[pos] == '%')
         {
             continue;
         }

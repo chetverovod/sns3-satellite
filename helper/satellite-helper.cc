@@ -240,7 +240,7 @@ SatHelper::SatHelper(std::string scenarioPath)
         std::string line;
         while (std::getline(satTraceStream, line))
         {
-            if (line.empty() || line[0] == '#')
+            if (line.empty() || line[0] == '%')
             {
                 continue;
             }

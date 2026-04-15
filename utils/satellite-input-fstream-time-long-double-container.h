@@ -112,7 +112,7 @@ class SatInputFileStreamTimeLongDoubleContainer : public Object
     void ClearContainer();
 
     /**
-     * \brief Read the next data row from file (skips blank lines and full-line # comments).
+     * \brief Read the next data row from file (skips blank lines and full-line % comments).
      * \param row output row of m_valuesInRow numbers
      * \return true if a row was read, false at end of file
      */

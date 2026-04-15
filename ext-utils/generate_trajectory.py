@@ -157,6 +157,6 @@ if __name__ == "__main__":
     )
 
     # Print all GPS locations
-    print('# time lat lon alt')
+    print('% time lat lon alt')
     for loc in locations:
         print(loc['time'], ' '.join(map(str, loc['coords'])))
