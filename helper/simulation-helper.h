@@ -546,6 +546,21 @@ class SimulationHelper : public Object
     void LogSatCoordinates();
 
     /**
+     * \brief Initialize output file paths for periodic UT/GW coordinates logs.
+     */
+    void InitializeUtGwCoordinatesLogs();
+
+    /**
+     * \brief Append current coordinates of all UT nodes to the coordinates log.
+     */
+    void LogUtCoordinates();
+
+    /**
+     * \brief Append current coordinates of all GW nodes to the coordinates log.
+     */
+    void LogGwCoordinates();
+
+    /**
      * \brief Check if a beam is enabled.
      */
     bool IsBeamEnabled(uint32_t beamId) const;
@@ -606,6 +621,10 @@ class SimulationHelper : public Object
     EventId m_progressReportEvent;
     std::string m_satCoordinatesLogPath;
     bool m_satCoordinatesLogHeaderWritten;
+    std::string m_utCoordinatesLogPath;
+    std::string m_gwCoordinatesLogPath;
+    bool m_utCoordinatesLogHeaderWritten;
+    bool m_gwCoordinatesLogHeaderWritten;
 };
 
 class SimulationHelperConf : public Object

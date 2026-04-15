@@ -176,7 +176,11 @@ SimulationHelper::SimulationHelper()
       m_progressLoggingEnabled(false),
       m_progressUpdateInterval(Seconds(0.5)),
       m_satCoordinatesLogPath(""),
-      m_satCoordinatesLogHeaderWritten(false)
+      m_satCoordinatesLogHeaderWritten(false),
+      m_utCoordinatesLogPath(""),
+      m_gwCoordinatesLogPath(""),
+      m_utCoordinatesLogHeaderWritten(false),
+      m_gwCoordinatesLogHeaderWritten(false)
 {
     NS_FATAL_ERROR(
         "SimulationHelper: Default constructor not in use. Please create with simulation name. ");
@@ -202,7 +206,11 @@ SimulationHelper::SimulationHelper(std::string simulationName)
       m_progressLoggingEnabled(false),
       m_progressUpdateInterval(Seconds(0.5)),
       m_satCoordinatesLogPath(""),
-      m_satCoordinatesLogHeaderWritten(false)
+      m_satCoordinatesLogHeaderWritten(false),
+      m_utCoordinatesLogPath(""),
+      m_gwCoordinatesLogPath(""),
+      m_utCoordinatesLogHeaderWritten(false),
+      m_gwCoordinatesLogHeaderWritten(false)
 {
     NS_LOG_FUNCTION(this);
 
@@ -726,6 +734,8 @@ SimulationHelper::ProgressCb()
     std::cout << "Progress: " << Simulator::Now().GetSeconds() << "/" << GetSimTime().GetSeconds()
               << std::endl;
     LogSatCoordinates();
+    LogUtCoordinates();
+    LogGwCoordinates();
     m_progressReportEvent =
         Simulator::Schedule(m_progressUpdateInterval, &SimulationHelper::ProgressCb, this);
 }
@@ -745,6 +755,25 @@ SimulationHelper::InitializeSatCoordinatesLog()
     }
 
     m_satCoordinatesLogPath = outputPath + "/SatCoordinates.log";
+}
+
+void
+SimulationHelper::InitializeUtGwCoordinatesLogs()
+{
+    const std::string outputPath = Singleton<SatEnvVariables>::Get()->GetOutputPath();
+    if (outputPath.empty())
+    {
+        return;
+    }
+
+    if (m_utCoordinatesLogPath.empty())
+    {
+        m_utCoordinatesLogPath = outputPath + "/UtCoordinates.log";
+    }
+    if (m_gwCoordinatesLogPath.empty())
+    {
+        m_gwCoordinatesLogPath = outputPath + "/GwCoordinates.log";
+    }
 }
 
 void
@@ -783,6 +812,90 @@ SimulationHelper::LogSatCoordinates()
         GeoCoordinate pos = mobility->GetGeoPosition();
         out << Simulator::Now().GetSeconds() << " "
             << satId << " "
+            << pos.GetLatitude() << " "
+            << pos.GetLongitude() << " "
+            << pos.GetAltitude() << std::endl;
+    }
+}
+
+void
+SimulationHelper::LogUtCoordinates()
+{
+    InitializeUtGwCoordinatesLogs();
+    if (m_utCoordinatesLogPath.empty())
+    {
+        return;
+    }
+
+    std::ofstream out(m_utCoordinatesLogPath, std::ios::out | std::ios::app);
+    if (!out.is_open())
+    {
+        NS_LOG_WARN("Cannot open UT coordinates log file: " << m_utCoordinatesLogPath);
+        return;
+    }
+
+    if (!m_utCoordinatesLogHeaderWritten)
+    {
+        out << "% output_type: 'OUTPUT_TYPE_SCATTER'" << std::endl;
+        out << "% log_source: 'SimulationHelper::ProgressCb'" << std::endl;
+        out << "% time_sec ut_id latitude_deg longitude_deg altitude_m" << std::endl;
+        m_utCoordinatesLogHeaderWritten = true;
+    }
+
+    NodeContainer uts = Singleton<SatTopology>::Get()->GetUtNodes();
+    for (uint32_t utId = 0; utId < uts.GetN(); ++utId)
+    {
+        Ptr<SatMobilityModel> mobility = uts.Get(utId)->GetObject<SatMobilityModel>();
+        if (mobility == nullptr)
+        {
+            continue;
+        }
+
+        GeoCoordinate pos = mobility->GetGeoPosition();
+        out << Simulator::Now().GetSeconds() << " "
+            << utId << " "
+            << pos.GetLatitude() << " "
+            << pos.GetLongitude() << " "
+            << pos.GetAltitude() << std::endl;
+    }
+}
+
+void
+SimulationHelper::LogGwCoordinates()
+{
+    InitializeUtGwCoordinatesLogs();
+    if (m_gwCoordinatesLogPath.empty())
+    {
+        return;
+    }
+
+    std::ofstream out(m_gwCoordinatesLogPath, std::ios::out | std::ios::app);
+    if (!out.is_open())
+    {
+        NS_LOG_WARN("Cannot open GW coordinates log file: " << m_gwCoordinatesLogPath);
+        return;
+    }
+
+    if (!m_gwCoordinatesLogHeaderWritten)
+    {
+        out << "% output_type: 'OUTPUT_TYPE_SCATTER'" << std::endl;
+        out << "% log_source: 'SimulationHelper::ProgressCb'" << std::endl;
+        out << "% time_sec gw_id latitude_deg longitude_deg altitude_m" << std::endl;
+        m_gwCoordinatesLogHeaderWritten = true;
+    }
+
+    NodeContainer gws = Singleton<SatTopology>::Get()->GetGwNodes();
+    for (uint32_t gwId = 0; gwId < gws.GetN(); ++gwId)
+    {
+        Ptr<SatMobilityModel> mobility = gws.Get(gwId)->GetObject<SatMobilityModel>();
+        if (mobility == nullptr)
+        {
+            continue;
+        }
+
+        GeoCoordinate pos = mobility->GetGeoPosition();
+        out << Simulator::Now().GetSeconds() << " "
+            << gwId << " "
             << pos.GetLatitude() << " "
             << pos.GetLongitude() << " "
             << pos.GetAltitude() << std::endl;
@@ -1686,6 +1799,7 @@ SimulationHelper::EnableProgressLogs()
         m_progressReportEvent =
             Simulator::Schedule(m_progressUpdateInterval, &SimulationHelper::ProgressCb, this);
         InitializeSatCoordinatesLog();
+        InitializeUtGwCoordinatesLogs();
         m_progressLoggingEnabled = true;
     }
 }
