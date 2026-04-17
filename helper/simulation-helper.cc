@@ -755,6 +755,15 @@ SimulationHelper::InitializeSatCoordinatesLog()
     }
 
     m_satCoordinatesLogPath = outputPath + "/SatCoordinates.log";
+    {
+        std::ofstream truncateOut(m_satCoordinatesLogPath, std::ios::out | std::ios::trunc);
+        if (!truncateOut.is_open())
+        {
+            NS_LOG_WARN("Cannot initialize satellite coordinates log file: "
+                        << m_satCoordinatesLogPath);
+        }
+    }
+    m_satCoordinatesLogHeaderWritten = false;
 }
 
 void
@@ -769,10 +778,22 @@ SimulationHelper::InitializeUtGwCoordinatesLogs()
     if (m_utCoordinatesLogPath.empty())
     {
         m_utCoordinatesLogPath = outputPath + "/UtCoordinates.log";
+        std::ofstream truncateOut(m_utCoordinatesLogPath, std::ios::out | std::ios::trunc);
+        if (!truncateOut.is_open())
+        {
+            NS_LOG_WARN("Cannot initialize UT coordinates log file: " << m_utCoordinatesLogPath);
+        }
+        m_utCoordinatesLogHeaderWritten = false;
     }
     if (m_gwCoordinatesLogPath.empty())
     {
         m_gwCoordinatesLogPath = outputPath + "/GwCoordinates.log";
+        std::ofstream truncateOut(m_gwCoordinatesLogPath, std::ios::out | std::ios::trunc);
+        if (!truncateOut.is_open())
+        {
+            NS_LOG_WARN("Cannot initialize GW coordinates log file: " << m_gwCoordinatesLogPath);
+        }
+        m_gwCoordinatesLogHeaderWritten = false;
     }
 }
 
