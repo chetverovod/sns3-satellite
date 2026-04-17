@@ -510,7 +510,10 @@ SatStatsPacketErrorHelper::UpdateIdentifierOnProbes()
             NS_FATAL_ERROR("Error disconnecting trace file on handover");
         }
 
-        identifier = GetIdentifierForUtUser(node);
+        // InstallProbeOnUt stores the UT terminal node in m_probes; use
+        // GetIdentifierForUt (same as initial install), not GetIdentifierForUtUser
+        // which expects a UT *user* node and otherwise leaves identifier 0.
+        identifier = GetIdentifierForUt(node);
 
         if (!ConnectProbeToCollector(probe, identifier))
         {
