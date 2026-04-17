@@ -1315,6 +1315,8 @@ SatBeamHelper::EnablePacketTrace()
                                   MakeCallback(&SatPacketTrace::AddTraceEntry, m_packetTrace));
     Config::ConnectWithoutContext("/NodeList/*/DeviceList/*/SatMac/PacketTrace",
                                   MakeCallback(&SatPacketTrace::AddTraceEntry, m_packetTrace));
+    Config::ConnectWithoutContext("/ChannelList/*/$ns3::SatChannel/PacketTrace",
+                                  MakeCallback(&SatPacketTrace::AddTraceEntry, m_packetTrace));
     if (maxRegeneration == SatEnums::REGENERATION_LINK ||
         maxRegeneration == SatEnums::REGENERATION_NETWORK)
     {

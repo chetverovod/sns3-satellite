@@ -318,6 +318,50 @@ class SatChannel : public Channel
     void DoRxPowerCalculation(Ptr<SatSignalParameters> rxParams, Ptr<SatPhyRx> phyRx);
 
     /**
+     * \brief Emit a channel-level packet trace event.
+     * \param packetEvent Packet event to trace (SND/RCV/...)
+     * \param nodeType Endpoint node type.
+     * \param nodeId Endpoint node id.
+     * \param nodeMac Endpoint MAC address.
+     * \param linkDirection Link direction.
+     * \param packetInfo Packet info string.
+     */
+    void TraceChannelPacketEvent(SatEnums::SatPacketEvent_t packetEvent,
+                                 SatEnums::SatNodeType_t nodeType,
+                                 uint32_t nodeId,
+                                 Mac48Address nodeMac,
+                                 SatEnums::SatLinkDir_t linkDirection,
+                                 const std::string& packetInfo);
+
+    /**
+     * \brief Determine source endpoint tuple for channel TX tracing.
+     * \param source Source MAC address.
+     * \param nodeType [out] source node type.
+     * \param nodeId [out] source node id.
+     */
+    void ResolveChannelTxEndpoint(Mac48Address source,
+                                  SatEnums::SatNodeType_t& nodeType,
+                                  uint32_t& nodeId) const;
+
+    /**
+     * \brief Determine destination endpoint tuple for channel RX tracing.
+     * \param receiver Receiver PHY.
+     * \param nodeType [out] destination node type.
+     * \param nodeId [out] destination node id.
+     * \param nodeMac [out] destination node MAC.
+     */
+    void ResolveChannelRxEndpoint(Ptr<SatPhyRx> receiver,
+                                  SatEnums::SatNodeType_t& nodeType,
+                                  uint32_t& nodeId,
+                                  Mac48Address& nodeMac) const;
+
+    /**
+     * \brief Resolve link direction for this channel type.
+     * \return Forward or return link direction.
+     */
+    SatEnums::SatLinkDir_t GetChannelLinkDirection() const;
+
+    /**
      * \brief Function for getting the external source fading value
      * \param rxParams Rx parameters
      * \param phyRx The receiver SatPhyRx entity
@@ -331,6 +375,19 @@ class SatChannel : public Channel
      * \return source MAC address
      */
     Mac48Address GetSourceAddress(Ptr<SatSignalParameters> rxParams);
+
+    /**
+     * \brief Packet trace callback emitted at channel (LL_CH) level.
+     */
+    TracedCallback<Time,
+                   SatEnums::SatPacketEvent_t,
+                   SatEnums::SatNodeType_t,
+                   uint32_t,
+                   Mac48Address,
+                   SatEnums::SatLogLevel_t,
+                   SatEnums::SatLinkDir_t,
+                   std::string>
+        m_packetTrace;
 };
 
 } // namespace ns3

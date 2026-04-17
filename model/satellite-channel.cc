@@ -99,6 +99,10 @@ SatChannel::GetTypeId(void)
         TypeId("ns3::SatChannel")
             .SetParent<Channel>()
             .AddConstructor<SatChannel>()
+            .AddTraceSource("PacketTrace",
+                            "Packet event trace at channel level",
+                            MakeTraceSourceAccessor(&SatChannel::m_packetTrace),
+                            "ns3::SatTypedefs::PacketTraceCallback")
             .AddAttribute("EnableRxPowerOutputTrace",
                           "Enable Rx power output trace.",
                           BooleanValue(false),
@@ -165,6 +169,19 @@ SatChannel::StartTx(Ptr<SatSignalParameters> txParams)
 {
     NS_LOG_FUNCTION(this << txParams);
     NS_ASSERT_MSG(txParams->m_phyTx, "NULL phyTx");
+    NS_ASSERT_MSG(!txParams->m_packetsInBurst.empty(),
+                  "SatChannel::StartTx - Empty packet burst cannot be traced");
+
+    SatEnums::SatNodeType_t txNodeType = SatEnums::NT_SAT;
+    uint32_t txNodeId = 0;
+    const Mac48Address sourceMac = GetSourceAddress(txParams);
+    ResolveChannelTxEndpoint(sourceMac, txNodeType, txNodeId);
+    TraceChannelPacketEvent(SatEnums::PACKET_SENT,
+                            txNodeType,
+                            txNodeId,
+                            sourceMac,
+                            GetChannelLinkDirection(),
+                            SatUtils::GetPacketInfo(txParams->m_packetsInBurst.front()));
 
     switch (m_fwdMode)
     {
@@ -319,8 +336,21 @@ void
 SatChannel::StartRx(Ptr<SatSignalParameters> rxParams, Ptr<SatPhyRx> phyRx)
 {
     NS_LOG_FUNCTION(this << rxParams << phyRx);
+    NS_ASSERT_MSG(!rxParams->m_packetsInBurst.empty(),
+                  "SatChannel::StartRx - Empty packet burst cannot be traced");
 
     rxParams->m_channelType = m_channelType;
+
+    SatEnums::SatNodeType_t rxNodeType = SatEnums::NT_SAT;
+    uint32_t rxNodeId = 0;
+    Mac48Address rxNodeMac;
+    ResolveChannelRxEndpoint(phyRx, rxNodeType, rxNodeId, rxNodeMac);
+    TraceChannelPacketEvent(SatEnums::PACKET_RECV,
+                            rxNodeType,
+                            rxNodeId,
+                            rxNodeMac,
+                            GetChannelLinkDirection(),
+                            SatUtils::GetPacketInfo(rxParams->m_packetsInBurst.front()));
 
     double frequency_hz = m_carrierFreqConverter(m_channelType, m_freqId, rxParams->m_carrierId);
     rxParams->m_carrierFreq_hz = frequency_hz;
@@ -689,6 +719,178 @@ SatChannel::GetSourceAddress(Ptr<SatSignalParameters> rxParams)
     (*i)->PeekPacketTag(tag);
 
     return tag.GetSourceAddress();
+}
+
+void
+SatChannel::TraceChannelPacketEvent(SatEnums::SatPacketEvent_t packetEvent,
+                                    SatEnums::SatNodeType_t nodeType,
+                                    uint32_t nodeId,
+                                    Mac48Address nodeMac,
+                                    SatEnums::SatLinkDir_t linkDirection,
+                                    const std::string& packetInfo)
+{
+    NS_LOG_FUNCTION(this << packetEvent << nodeType << nodeId << nodeMac);
+
+    m_packetTrace(Simulator::Now(),
+                  packetEvent,
+                  nodeType,
+                  nodeId,
+                  nodeMac,
+                  SatEnums::LL_CH,
+                  linkDirection,
+                  packetInfo);
+}
+
+void
+SatChannel::ResolveChannelTxEndpoint(Mac48Address source,
+                                     SatEnums::SatNodeType_t& nodeType,
+                                     uint32_t& nodeId) const
+{
+    NS_LOG_FUNCTION(this << source);
+
+    const SatIdMapper* mapper = Singleton<SatIdMapper>::Get();
+
+    switch (m_channelType)
+    {
+    case SatEnums::FORWARD_FEEDER_CH: {
+        nodeType = SatEnums::NT_GW;
+        const int32_t id = mapper->GetGwIdWithMac(source);
+        if (id < 0)
+        {
+            NS_LOG_WARN("SatChannel::ResolveChannelTxEndpoint - Unknown GW source MAC " << source
+                                                                                          << ", using nodeId=0 in LL_CH trace");
+            nodeId = 0;
+        }
+        else
+        {
+            nodeId = static_cast<uint32_t>(id);
+        }
+        break;
+    }
+    case SatEnums::RETURN_USER_CH: {
+        nodeType = SatEnums::NT_UT;
+        const int32_t id = mapper->GetUtIdWithMac(source);
+        if (id < 0)
+        {
+            NS_LOG_WARN("SatChannel::ResolveChannelTxEndpoint - Unknown UT source MAC " << source
+                                                                                          << ", using nodeId=0 in LL_CH trace");
+            nodeId = 0;
+        }
+        else
+        {
+            nodeId = static_cast<uint32_t>(id);
+        }
+        break;
+    }
+    case SatEnums::FORWARD_USER_CH:
+    case SatEnums::RETURN_FEEDER_CH: {
+        nodeType = SatEnums::NT_SAT;
+        const int32_t id = mapper->GetSatIdWithMac(source);
+        if (id < 0)
+        {
+            NS_LOG_WARN("SatChannel::ResolveChannelTxEndpoint - Unknown SAT source MAC " << source
+                                                                                           << ", using nodeId=0 in LL_CH trace");
+            nodeId = 0;
+        }
+        else
+        {
+            nodeId = static_cast<uint32_t>(id);
+        }
+        break;
+    }
+    default: {
+        NS_FATAL_ERROR("SatChannel::ResolveChannelTxEndpoint - Invalid channel type");
+        break;
+    }
+    }
+}
+
+void
+SatChannel::ResolveChannelRxEndpoint(Ptr<SatPhyRx> receiver,
+                                     SatEnums::SatNodeType_t& nodeType,
+                                     uint32_t& nodeId,
+                                     Mac48Address& nodeMac) const
+{
+    NS_LOG_FUNCTION(this << receiver);
+
+    nodeMac = Mac48Address::ConvertFrom(receiver->GetDevice()->GetAddress());
+    const SatIdMapper* mapper = Singleton<SatIdMapper>::Get();
+
+    switch (m_channelType)
+    {
+    case SatEnums::FORWARD_USER_CH: {
+        nodeType = SatEnums::NT_UT;
+        const int32_t id = mapper->GetUtIdWithMac(nodeMac);
+        if (id < 0)
+        {
+            NS_LOG_WARN("SatChannel::ResolveChannelRxEndpoint - Unknown UT destination MAC "
+                        << nodeMac << ", using nodeId=0 in LL_CH trace");
+            nodeId = 0;
+        }
+        else
+        {
+            nodeId = static_cast<uint32_t>(id);
+        }
+        break;
+    }
+    case SatEnums::RETURN_FEEDER_CH: {
+        nodeType = SatEnums::NT_GW;
+        const int32_t id = mapper->GetGwIdWithMac(nodeMac);
+        if (id < 0)
+        {
+            NS_LOG_WARN("SatChannel::ResolveChannelRxEndpoint - Unknown GW destination MAC "
+                        << nodeMac << ", using nodeId=0 in LL_CH trace");
+            nodeId = 0;
+        }
+        else
+        {
+            nodeId = static_cast<uint32_t>(id);
+        }
+        break;
+    }
+    case SatEnums::FORWARD_FEEDER_CH:
+    case SatEnums::RETURN_USER_CH: {
+        nodeType = SatEnums::NT_SAT;
+        const int32_t id = mapper->GetSatIdWithMac(nodeMac);
+        if (id < 0)
+        {
+            NS_LOG_WARN("SatChannel::ResolveChannelRxEndpoint - Unknown SAT destination MAC "
+                        << nodeMac << ", using nodeId=0 in LL_CH trace");
+            nodeId = 0;
+        }
+        else
+        {
+            nodeId = static_cast<uint32_t>(id);
+        }
+        break;
+    }
+    default: {
+        NS_FATAL_ERROR("SatChannel::ResolveChannelRxEndpoint - Invalid channel type");
+        break;
+    }
+    }
+}
+
+SatEnums::SatLinkDir_t
+SatChannel::GetChannelLinkDirection() const
+{
+    NS_LOG_FUNCTION(this);
+
+    switch (m_channelType)
+    {
+    case SatEnums::FORWARD_FEEDER_CH:
+    case SatEnums::FORWARD_USER_CH:
+        return SatEnums::LD_FORWARD;
+    case SatEnums::RETURN_FEEDER_CH:
+    case SatEnums::RETURN_USER_CH:
+        return SatEnums::LD_RETURN;
+    default:
+        NS_FATAL_ERROR("SatChannel::GetChannelLinkDirection - Invalid channel type");
+        break;
+    }
+
+    NS_FATAL_ERROR("SatChannel::GetChannelLinkDirection - Invalid channel type");
+    return SatEnums::LD_FORWARD;
 }
 
 void
