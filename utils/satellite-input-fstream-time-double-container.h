@@ -85,10 +85,13 @@ class SatInputFileStreamTimeDoubleContainer : public Object
 
     /**
      * \brief Function for locating time samples enclosing the current time and a linear
-     * interpolation between these samples \return linear interpolation of the current time value
+     * interpolation between these samples.
+     * \param unwrapColumn if >= 0, lerp that column on the shortest arc in degrees
+     *        and wrap the result to [-180, 180] (geodetic longitude).
+     * \return linear interpolation of the current time value
      * between the two closest time samples
      */
-    std::vector<double> InterpolateBetweenClosestTimeSamples();
+    std::vector<double> InterpolateBetweenClosestTimeSamples(int32_t unwrapColumn = -1);
 
     /**
      * \brief Do needed dispose actions

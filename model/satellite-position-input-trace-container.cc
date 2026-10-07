@@ -128,7 +128,8 @@ SatPositionInputTraceContainer::GetPosition(const std::string& key,
 {
     NS_LOG_FUNCTION(this);
 
-    std::vector<double> row = FindNode(key)->InterpolateBetweenClosestTimeSamples();
+    std::vector<double> row = FindNode(key)->InterpolateBetweenClosestTimeSamples(
+        static_cast<int32_t>(SatBaseTraceContainer::POSITION_TRACE_DEFAULT_LONGITUDE_INDEX));
     return GeoCoordinate(row.at(SatBaseTraceContainer::POSITION_TRACE_DEFAULT_LATITUDE_INDEX),
                          row.at(SatBaseTraceContainer::POSITION_TRACE_DEFAULT_LONGITUDE_INDEX),
                          row.at(SatBaseTraceContainer::POSITION_TRACE_DEFAULT_ALTITUDE_INDEX),

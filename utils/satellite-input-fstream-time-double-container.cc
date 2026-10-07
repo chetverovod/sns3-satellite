@@ -231,7 +231,7 @@ SatInputFileStreamTimeDoubleContainer::ProceedToNextClosestTimeSample()
 }
 
 std::vector<double>
-SatInputFileStreamTimeDoubleContainer::InterpolateBetweenClosestTimeSamples()
+SatInputFileStreamTimeDoubleContainer::InterpolateBetweenClosestTimeSamples(int32_t unwrapColumn)
 {
     NS_LOG_FUNCTION(this);
 
@@ -274,8 +274,30 @@ SatInputFileStreamTimeDoubleContainer::InterpolateBetweenClosestTimeSamples()
     std::vector<double> interpolatedPosition(rowSize);
     for (std::size_t i = 0; i < rowSize; ++i)
     {
-        interpolatedPosition[i] =
-            selectedPosition[i] + linearCoefficient * (closestPosition[i] - selectedPosition[i]);
+        double delta = closestPosition[i] - selectedPosition[i];
+        if (unwrapColumn >= 0 && i == static_cast<std::size_t>(unwrapColumn))
+        {
+            while (delta > 180.0)
+            {
+                delta -= 360.0;
+            }
+            while (delta < -180.0)
+            {
+                delta += 360.0;
+            }
+        }
+        interpolatedPosition[i] = selectedPosition[i] + linearCoefficient * delta;
+        if (unwrapColumn >= 0 && i == static_cast<std::size_t>(unwrapColumn))
+        {
+            while (interpolatedPosition[i] > 180.0)
+            {
+                interpolatedPosition[i] -= 360.0;
+            }
+            while (interpolatedPosition[i] < -180.0)
+            {
+                interpolatedPosition[i] += 360.0;
+            }
+        }
     }
 
     return interpolatedPosition;

@@ -99,6 +99,13 @@ class SatTracedMobilityModel : public SatMobilityModel
     virtual GeoCoordinate DoGetGeoPosition(void) const;
 
     /**
+     * Cartesian ECEF for MobilityModel::GetPosition() (LENA Friis).
+     * The base-class cache stays at the origin because geo updates use
+     * DoSetGeoPosition, not SetGeoPosition. SNS-3 RF keeps GetGeoPosition().
+     */
+    virtual Vector DoGetPosition() const;
+
+    /**
      * \param position the position to set.
      */
     virtual void DoSetGeoPosition(const GeoCoordinate& position);

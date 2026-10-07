@@ -111,6 +111,14 @@ SatTracedMobilityModel::DoGetGeoPosition(void) const
     return m_geoPosition;
 }
 
+Vector
+SatTracedMobilityModel::DoGetPosition() const
+{
+    NS_LOG_FUNCTION(this);
+    // Match SatSGP4MobilityModel: always ECEF from geodetic position.
+    return DoGetGeoPosition().ToVector();
+}
+
 void
 SatTracedMobilityModel::DoSetGeoPosition(const GeoCoordinate& position)
 {
